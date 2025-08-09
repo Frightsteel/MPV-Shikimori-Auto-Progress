@@ -34,11 +34,6 @@ local function read_config()
         return nil
     end
 
-    if not config.user_id or not config.access_token or not config.refresh_token then
-        mp.msg.error("Shikimori: shikimori-autoupdate-config.json missing user_id or access_token or refresh_token")
-        return nil
-    end
-
     -- Для хранения времени жизни токена и времени создания (если есть)
     TOKEN_EXPIRES_IN = config.expires_in or 0
     TOKEN_CREATED_AT = config.created_at or 0
@@ -85,6 +80,77 @@ local function save_config()
     f:write(content)
     f:close()
     mp.msg.info("Shikimori: shikimori-autoupdate-config.json updated with new tokens")
+end
+
+local function get_user_id()
+    local args = {
+        "curl",
+        "-s", "-X", "GET",
+        "https://shikimori.one/api/users/whoami",
+        "-H", "User-Agent: mpv-shikimori-script",
+        "-H", "Authorization: Bearer " .. ACCESS_TOKEN
+    }
+
+    local res = utils.subprocess({args = args, cancellable = false})
+
+    if res.status == 0 and res.stdout and #res.stdout > 0 then
+        local ok, data = pcall(json.decode, res.stdout)
+        if ok and data and data.id then
+            return data.id
+        else
+            mp.msg.error("Shikimori: failed to parse whoami response")
+            return nil
+        end
+    else
+        mp.msg.error("Shikimori: whoami request failed with status " .. tostring(res.status))
+        return nil
+    end
+end
+
+local function exchange_authorization_code(code)
+    mp.msg.info("Shikimori: exchanging authorization code for tokens...")
+
+    local args = {
+        "curl",
+        "-s", "-X", "POST",
+        "https://shikimori.one/oauth/token",
+        "-H", "User-Agent: mpv-shikimori-script",
+        "-F", "grant_type=authorization_code",
+        "-F", "client_id=" .. CLIENT_ID,
+        "-F", "client_secret=" .. CLIENT_SECRET,
+        "-F", "code=" .. code,
+        "-F", "redirect_uri=urn:ietf:wg:oauth:2.0:oob"
+    }
+
+    local res = utils.subprocess({args = args, cancellable = false})
+
+    if res.status == 0 and res.stdout and #res.stdout > 0 then
+        local ok, data = pcall(json.decode, res.stdout)
+        if ok and data and data.access_token and data.refresh_token and data.expires_in and data.created_at then
+            ACCESS_TOKEN = data.access_token
+            REFRESH_TOKEN = data.refresh_token
+            TOKEN_EXPIRES_IN = data.expires_in
+            TOKEN_CREATED_AT = data.created_at
+
+            local user_id = get_user_id()
+            if user_id then
+                USERNAME = user_id
+                save_config()
+                mp.msg.info("Shikimori: authorization code exchanged successfully, user ID fetched and saved.")
+                return true
+            else
+                mp.msg.error("Shikimori: failed to get user ID after authorization")
+                return false
+            end
+        else
+            mp.msg.error("Shikimori: failed to parse token response")
+            mp.msg.error("Response: " .. tostring(res.stdout))
+            return false
+        end
+    else
+        mp.msg.error("Shikimori: authorization code exchange request failed with status " .. tostring(res.status))
+        return false
+    end
 end
 
 local function is_token_expired()
@@ -316,6 +382,15 @@ mp.register_event("end-file", function()
 end)
 
 -- Проверяем токен при старте скрипта
-if is_token_expired() then
-    refresh_access_token()
+if config.authorization_code and (not ACCESS_TOKEN or ACCESS_TOKEN == "") and (not REFRESH_TOKEN or REFRESH_TOKEN == "") then
+    -- Первый заход, есть код, но нет токенов
+    if not exchange_authorization_code(config.authorization_code) then
+        mp.msg.error("Shikimori: failed to exchange authorization code")
+        return
+    end
+else
+    if is_token_expired() then
+        refresh_access_token()
+    end
 end
+
