@@ -19,21 +19,11 @@ Lua-скрипт для MPV, который автоматически отме�
 
 ---
 
-### 3. Создать конфиг
+### 3. Скачать конфиг
 Скрипт читает настройки из файла `shikimori-autoupdate-config.json`, который должен находиться в:  
 - **Windows:** `%APPDATA%\mpv\scripts-opts\shikimori-autoupdate-config.json`
 
-Создайте папку `scripts-opts` (если её нет) и файл `shikimori-autoupdate-config.json` со следующим содержимым:
-
-```json
-{
-  "user_id": 0,
-  "access_token": "",
-  "refresh_token": "",
-  "expires_in": 86400,
-  "created_at": 0
-}
-```
+Создайте папку `scripts-opts` (если её нет) и поместите `shikimori-autoupdate-config.json` в эту папку.
 
 ---
 
@@ -41,43 +31,12 @@ Lua-скрипт для MPV, который автоматически отме�
 Откройте в браузере:
 
 ```
-https://shikimori.one/oauth/authorize?client_id=PRxCBtiNJKzK_AKst3jEc1cPswIx4jgnC9sRZ-veP3E&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code
+https://shikimori.one/oauth/authorize?client_id=PRxCBtiNJKzK_AKst3jEc1cPswIx4jgnC9sRZ-veP3E&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob&response_type=code&scope=user_rates
 ```
 
 Авторизуйтесь и скопируйте код авторизации (он появится на странице).
 
-В терминале или командной строке выполните:
-
-```bash
-curl -X POST https://shikimori.one/oauth/token \
-  -F grant_type=authorization_code \
-  -F client_id=PRxCBtiNJKzK_AKst3jEc1cPswIx4jgnC9sRZ-veP3E \
-  -F client_secret=kJe7XldnZZkCDH_UCHfSnzmGnc0ZI-FHnqoZljqlk-w \
-  -F code=ПОЛУЧЕННЫЙ_КОД \
-  -F redirect_uri=urn:ietf:wg:oauth:2.0:oob
-```
-
-В ответе будут поля:
-
-- `access_token`
-- `refresh_token`
-- `expires_in`
-- `created_at`
-
-Чтобы получить числовой ID пользователя (он нужен для `user_id` в `config.json`), выполните следующие шаги:
-
-- Зайдите в свой профиль на Shikimori (например, https://shikimori.one/YOUR_USERNAME).
-- Откройте консоль разработчика в браузере (нажмите F12).
-- Перейдите во вкладку "Console".
-- Введите следующий код и нажмите Enter:
-
-```js
-fetch('https://shikimori.one/api/users/' + 'Frightsteel')
-  .then(response => response.json())
-  .then(data => console.log(data.id));
-```
-
-Вставьте эти значения в `shikimori-autoupdate-config.json`.
+Вставьте этот код в поле "authorization_code" вашего shikimori-autoupdate-config.json.
 
 ---
 
