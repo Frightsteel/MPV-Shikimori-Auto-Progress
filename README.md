@@ -77,7 +77,7 @@ fetch('https://shikimori.one/api/users/' + 'Frightsteel')
   .then(data => console.log(data.id));
 ```
 
-Вставьте эти значения в `config.json`.
+Вставьте эти значения в `shikimori-autoupdate-config.json`.
 
 ---
 
