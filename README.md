@@ -1,4 +1,4 @@
-# MPV Shikimori Auto Progress
+# MPV Shikimori Auto Update
 
 Lua-скрипт для MPV, который автоматически отмечает эпизод просмотренным на [Shikimori](https://shikimori.one), если вы досмотрели его до конца (≥ 90%).  
 
